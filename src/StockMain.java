@@ -43,16 +43,20 @@ public class StockMain {
 		// System.out.println("intercept: " + regr.intercept());
 
 		String[] symbols = { "AI.PA", "ALV.DE", "ABI.BR", "ADS.DE", "ENI.MI" };
+		String[] apikey = { "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "TCWC4KTESJIY8UL5",
+				"TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC",
+				"WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA" };
 
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-		Date datum = format.parse("2019-05-03");
+		Date datum = format.parse("2019-05-06");
+		//Date datum = new Date();
 
 		Map<String, Map<String, Object>> stocksMap = new HashMap<String, Map<String, Object>>();
 		for (int i = 0; i < symbols.length; i++) {
 			Map<String, Object> stockMap = new HashMap<String, Object>();
 			System.out.println("Testing " + i + " - Send Http GET request");
 			try {
-				JSONObject resp = http.sendGet(symbols[i]);
+				JSONObject resp = http.sendGet(symbols[i], apikey[i]);
 				JSONObject arr = resp.getJSONObject("Time Series (Daily)");
 				SortedMap<String, String> stockdata = new TreeMap<String, String>(Collections.reverseOrder());
 				Iterator it = arr.keys();
@@ -96,6 +100,8 @@ public class StockMain {
 				System.out.println("R2: " + regr.R2());
 				System.out.println("intercept: " + regr.intercept());
 				stockMap.put("slope", regr.slope());
+				// normalized slope
+				stockMap.put("n_slope", regr.slope() * 100 / y[89]);
 				stocksMap.put(symbols[i], stockMap);
 
 				exportDataToExcel("E:/" + symbols[i] + ".csv", y);
@@ -107,13 +113,18 @@ public class StockMain {
 		}
 
 		// elaborate Slope table
-		elaborateSlopeTable(stocksMap);
+		try {
+			elaborateSlopeTable(stocksMap);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 	}
 
-	private JSONObject sendGet(String symbol) throws Exception {
+	private JSONObject sendGet(String symbol, String apikey) throws Exception {
 
-		String url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&apikey=IJMOD1FFWEBG5VWY";
+		String url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&apikey=" + apikey + "\"";
 
 		URL obj = new URL(url);
 		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
@@ -156,15 +167,16 @@ public class StockMain {
 		// int columnCount = data[i].length;
 		String[] values = new String[data.length];
 		for (int j = 0; j < data.length; j++) {
-			values[j] = Double.toString(data[j]).replace(".", ",");
+			csvWriter.writeNext(new String[] { Integer.toString(j + 1), Double.toString(data[j]).replace(".", ",") });
+			// values[j] = Double.toString(data[j]).replace(".", ",");
 		}
-		csvWriter.writeNext(values);
+		// csvWriter.writeNext(values);
 
 		csvWriter.flush();
 		csvWriter.close();
 	}
 
-	private static void elaborateSlopeTable(Map<String, Map<String, Object>> stocksMap) {
+	private static void elaborateSlopeTable(Map<String, Map<String, Object>> stocksMap) throws IOException {
 		System.out.println("Slope table not ordered:");
 		for (String key : stocksMap.keySet()) {
 			System.out.println(key + " --- " + stocksMap.get(key).get("slope"));
@@ -175,15 +187,37 @@ public class StockMain {
 		List<Entry<String, Map<String, Object>>> list = new ArrayList<Entry<String, Map<String, Object>>>(set);
 		Collections.sort(list, new Comparator<Map.Entry<String, Map<String, Object>>>() {
 			public int compare(Map.Entry<String, Map<String, Object>> o1, Map.Entry<String, Map<String, Object>> o2) {
-				return ((Double) o1.getValue().get("slope")).compareTo((Double) o2.getValue().get("slope"));// Ascending
+				return ((Double) o2.getValue().get("n_slope")).compareTo((Double) o1.getValue().get("n_slope"));// Ascending
 				// order
 				// return (o2.getValue()).compareTo( o1.getValue()
 				// );//Descending order
 			}
 		});
 		for (Map.Entry<String, Map<String, Object>> entry : list) {
-			System.out.println(entry.getKey() + " ==== " + entry.getValue().get("slope"));
+			System.out.println(entry.getKey() + " ==== " + entry.getValue().get("n_slope") + " ==== " + entry.getValue().get("slope"));
 		}
+
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+		// Date datum = format.parse("2019-05-06");
+		Date datum = new Date();
+
+		String filename = "E:/" + format.format(datum) + "table.csv";
+		File file = new File(filename);
+		if (!file.isFile())
+			file.createNewFile();
+
+		CSVWriter csvWriter = new CSVWriter(new FileWriter(file));
+
+		// for (int i = 0; i < rowCount; i++) {
+		// int columnCount = data[i].length;
+		for (Map.Entry<String, Map<String, Object>> entry : list) {
+			csvWriter.writeNext(new String[] { entry.getKey(), entry.getValue().get("n_slope").toString(), entry.getValue().get("slope").toString() });
+			// values[j] = Double.toString(data[j]).replace(".", ",");
+		}
+		// csvWriter.writeNext(values);
+
+		csvWriter.flush();
+		csvWriter.close();
 
 	}
 
