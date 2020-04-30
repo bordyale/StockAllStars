@@ -4,6 +4,8 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
@@ -24,7 +26,7 @@ import java.util.TreeMap;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import au.com.bytecode.opencsv.CSVWriter;
+//import au.com.bytecode.opencsv.CSVWriter;
 
 public class StockMain {
 
@@ -42,14 +44,15 @@ public class StockMain {
 		// System.out.println("R2: " + regr.R2());
 		// System.out.println("intercept: " + regr.intercept());
 
-		String[] symbols = { "AI.PA", "ALV.DE", "ABI.BR", "ADS.DE", "ENI.MI" };
-		String[] apikey = { "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "TCWC4KTESJIY8UL5",
-				"TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC",
-				"WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA" };
+		String[] symbols = { "O" };
+		String[] years = { "2020", "2019", "2018", "2017" };
+		String[] apikey = { "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5",
+				"TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA",
+				"NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA" };
 
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-		Date datum = format.parse("2019-05-06");
-		//Date datum = new Date();
+		// Date datum = format.parse("2019-05-06");
+		// Date datum = new Date();
 
 		Map<String, Map<String, Object>> stocksMap = new HashMap<String, Map<String, Object>>();
 		for (int i = 0; i < symbols.length; i++) {
@@ -57,54 +60,35 @@ public class StockMain {
 			System.out.println("Testing " + i + " - Send Http GET request");
 			try {
 				JSONObject resp = http.sendGet(symbols[i], apikey[i]);
-				JSONObject arr = resp.getJSONObject("Time Series (Daily)");
-				SortedMap<String, String> stockdata = new TreeMap<String, String>(Collections.reverseOrder());
+				JSONObject arr = resp.getJSONObject("Monthly Adjusted Time Series");
+				SortedMap<String, String> divMap = new TreeMap<String, String>(Collections.reverseOrder());
 				Iterator it = arr.keys();
 				while (it.hasNext()) {
 					String key = (String) it.next();
-					stockdata.put(key, arr.getJSONObject(key).getString("4. close"));
+					divMap.put(key, arr.getJSONObject(key).getString("7. dividend amount"));
 				}
-				System.out.println(stockdata.toString());
-				stockMap.put("data", stockdata);
+				System.out.println(divMap.toString());
+				// stockMap.put("data", stockdata);
+
+				for (String year : years) {
+					int hits = 0;
+					BigDecimal yearDiv = BigDecimal.ZERO;
+					for (String key : divMap.keySet()) {
+						if (key.startsWith(year)) {
+							hits++;
+							yearDiv = yearDiv.add(new BigDecimal(divMap.get(key)));
+						}
+					}
+					String closePrice = arr.getJSONObject(divMap.firstKey()).getString("5. adjusted close");
+					BigDecimal yeld = yearDiv.divide(new BigDecimal(closePrice), 4, RoundingMode.HALF_UP);
+					System.out.println(year + " hits: " + hits + " div " + yearDiv + " yeld: " + yeld);
+
+				}
 
 				// List<String> list = new
 				// ArrayList<String>(stockdata.keySet());
 
 				// Collections.reverse(list);
-
-				double[] x = new double[90];
-				double[] y = new double[90];
-				int j = 0;
-				Set<String> set = stockdata.keySet();
-				for (String value : set) {
-					Date valueDate = format.parse(value);
-
-					if (valueDate.before(datum)) {
-
-						if (j < 90) {
-							x[j] = j;
-							y[89 - j] = new Double(stockdata.get(value));
-							System.out.println(value + " - - -" + stockdata.get(value));
-							j++;
-						} else {
-							break;
-						}
-					}
-
-				}
-				for (int k = 0; k < x.length; k++) {
-					System.out.println("Reg arrays: " + x[k] + " " + y[k]);
-				}
-				LinearRegression regr = new LinearRegression(x, y);
-				System.out.println("Slope: " + regr.slope());
-				System.out.println("R2: " + regr.R2());
-				System.out.println("intercept: " + regr.intercept());
-				stockMap.put("slope", regr.slope());
-				// normalized slope
-				stockMap.put("n_slope", regr.slope() * 100 / y[89]);
-				stocksMap.put(symbols[i], stockMap);
-
-				exportDataToExcel("E:/" + symbols[i] + ".csv", y);
 
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -112,19 +96,11 @@ public class StockMain {
 			}
 		}
 
-		// elaborate Slope table
-		try {
-			elaborateSlopeTable(stocksMap);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
 	}
 
 	private JSONObject sendGet(String symbol, String apikey) throws Exception {
 
-		String url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&apikey=" + apikey + "\"";
+		String url = "https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY_ADJUSTED&symbol=" + symbol + "&apikey=" + apikey + "\"";
 
 		URL obj = new URL(url);
 		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
@@ -151,7 +127,7 @@ public class StockMain {
 
 		// print result
 		System.out.println(jsonObj.toString());
-		System.out.println(jsonObj.getJSONObject("Meta Data").get("2. Symbol"));
+		System.out.println("Symbol: " + jsonObj.getJSONObject("Meta Data").get("2. Symbol"));
 		return jsonObj;
 
 	}
@@ -161,19 +137,20 @@ public class StockMain {
 		if (!file.isFile())
 			file.createNewFile();
 
-		CSVWriter csvWriter = new CSVWriter(new FileWriter(file));
+		// CSVWriter csvWriter = new CSVWriter(new FileWriter(file));
 
 		// for (int i = 0; i < rowCount; i++) {
 		// int columnCount = data[i].length;
 		String[] values = new String[data.length];
 		for (int j = 0; j < data.length; j++) {
-			csvWriter.writeNext(new String[] { Integer.toString(j + 1), Double.toString(data[j]).replace(".", ",") });
+			// csvWriter.writeNext(new String[] { Integer.toString(j + 1),
+			// Double.toString(data[j]).replace(".", ",") });
 			// values[j] = Double.toString(data[j]).replace(".", ",");
 		}
 		// csvWriter.writeNext(values);
 
-		csvWriter.flush();
-		csvWriter.close();
+		// csvWriter.flush();
+		// csvWriter.close();
 	}
 
 	private static void elaborateSlopeTable(Map<String, Map<String, Object>> stocksMap) throws IOException {
@@ -206,18 +183,20 @@ public class StockMain {
 		if (!file.isFile())
 			file.createNewFile();
 
-		CSVWriter csvWriter = new CSVWriter(new FileWriter(file));
+		// CSVWriter csvWriter = new CSVWriter(new FileWriter(file));
 
 		// for (int i = 0; i < rowCount; i++) {
 		// int columnCount = data[i].length;
 		for (Map.Entry<String, Map<String, Object>> entry : list) {
-			csvWriter.writeNext(new String[] { entry.getKey(), entry.getValue().get("n_slope").toString(), entry.getValue().get("slope").toString() });
+			// csvWriter.writeNext(new String[] { entry.getKey(),
+			// entry.getValue().get("n_slope").toString(),
+			// entry.getValue().get("slope").toString() });
 			// values[j] = Double.toString(data[j]).replace(".", ",");
 		}
 		// csvWriter.writeNext(values);
 
-		csvWriter.flush();
-		csvWriter.close();
+		// csvWriter.flush();
+		// csvWriter.close();
 
 	}
 
