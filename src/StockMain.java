@@ -81,7 +81,7 @@ public class StockMain {
 					}
 					String closePrice = arr.getJSONObject(divMap.firstKey()).getString("5. adjusted close");
 					BigDecimal yeld = yearDiv.divide(new BigDecimal(closePrice), 4, RoundingMode.HALF_UP);
-					System.out.println(year + " hits: " + hits + " div " + yearDiv + " yeld: " + yeld);
+					System.out.println("symbol: " + symbols[i] + " closePrice: " + closePrice + " div " + yearDiv + " yeld: " + yeld);
 
 				}
 
