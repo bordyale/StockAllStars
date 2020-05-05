@@ -11,6 +11,7 @@ import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -44,8 +45,12 @@ public class StockMain {
 		// System.out.println("R2: " + regr.R2());
 		// System.out.println("intercept: " + regr.intercept());
 
-		String[] symbols = { "O" };
+		String[] symbols = { "O", "KO" };
+		//1 = monthly
+		//3 = quaterly
+		Integer[] divRate = { 1, 3 };
 		String[] years = { "2020", "2019", "2018", "2017" };
+		String currentYear = new Integer(Calendar.getInstance().get(Calendar.YEAR)).toString();
 		String[] apikey = { "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5",
 				"TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA",
 				"NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA" };
@@ -68,27 +73,27 @@ public class StockMain {
 					divMap.put(key, arr.getJSONObject(key).getString("7. dividend amount"));
 				}
 				System.out.println(divMap.toString());
-				// stockMap.put("data", stockdata);
 
+				boolean foundLastDiv = false;
 				for (String year : years) {
-					int hits = 0;
 					BigDecimal yearDiv = BigDecimal.ZERO;
 					for (String key : divMap.keySet()) {
 						if (key.startsWith(year)) {
-							hits++;
-							yearDiv = yearDiv.add(new BigDecimal(divMap.get(key)));
+							BigDecimal dividend = new BigDecimal(divMap.get(key));
+							yearDiv = yearDiv.add(dividend);
+							if (foundLastDiv == false && dividend.compareTo(BigDecimal.ZERO) != 0) {
+								foundLastDiv = true;
+								yearDiv = dividend.divide(new BigDecimal(divRate[i]), 4, RoundingMode.HALF_UP).multiply(new BigDecimal("12"));
+								break;
+
+							}
 						}
 					}
 					String closePrice = arr.getJSONObject(divMap.firstKey()).getString("5. adjusted close");
 					BigDecimal yeld = yearDiv.divide(new BigDecimal(closePrice), 4, RoundingMode.HALF_UP);
-					System.out.println("symbol: " + symbols[i] + " closePrice: " + closePrice + " div " + yearDiv + " yeld: " + yeld);
+					System.out.println("symbol: " + symbols[i] + " year: " + year + " closePrice: " + closePrice + " div " + yearDiv + " yeld: " + yeld);
 
 				}
-
-				// List<String> list = new
-				// ArrayList<String>(stockdata.keySet());
-
-				// Collections.reverse(list);
 
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
