@@ -45,7 +45,7 @@ public class StockMain {
 		// System.out.println("R2: " + regr.R2());
 		// System.out.println("intercept: " + regr.intercept());
 
-		String[] symbols = { "O", "KO", "ABBV" };
+		String[] symbols = { "O", "KO", "BMO" };
 		// 1 = monthly
 		// 3 = quaterly
 		Integer[] divRate = { 1, 3, 3 };
@@ -75,6 +75,7 @@ public class StockMain {
 				System.out.println(divMap.toString());
 
 				boolean foundLastDiv = false;
+				boolean growCheck = true;
 				int growingDivYears = 0;
 				BigDecimal prevYearDiv = BigDecimal.ZERO;
 
@@ -96,8 +97,14 @@ public class StockMain {
 							}
 						}
 					}
-					if (prevYearDiv.compareTo(yearDiv) >= 0) {
+					if(year.compareTo(currentYear)==0){
+						prevYearDiv = yearDiv;
+					}
+					if (prevYearDiv.compareTo(yearDiv) >= 0 && growCheck== true) {
 						growingDivYears++;
+					}else{
+						growCheck = false;
+						growingDivYears =0;
 					}
 					String closePrice = arr.getJSONObject(divMap.firstKey()).getString("5. adjusted close");
 					BigDecimal yeld = yearDiv.divide(new BigDecimal(closePrice), 4, RoundingMode.HALF_UP);
