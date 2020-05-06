@@ -45,7 +45,7 @@ public class StockMain {
 		// System.out.println("R2: " + regr.R2());
 		// System.out.println("intercept: " + regr.intercept());
 
-		String[] symbols = { "O", "KO", "BMO" };
+		String[] symbols = { "EMN", "KO", "HNI" };
 		// 1 = monthly
 		// 3 = quaterly
 		Integer[] divRate = { 1, 3, 3 };
@@ -60,9 +60,11 @@ public class StockMain {
 		// Date datum = new Date();
 
 		Map<String, Map<String, Object>> stocksMap = new HashMap<String, Map<String, Object>>();
+
 		for (int i = 0; i < symbols.length; i++) {
 			Map<String, Object> stockMap = new HashMap<String, Object>();
-			System.out.println("Testing " + i + " - Send Http GET request");
+
+			// System.out.println("Testing " + i + " - Send Http GET request");
 			try {
 				JSONObject resp = http.sendGet(symbols[i], apikey[i]);
 				JSONObject arr = resp.getJSONObject("Monthly Adjusted Time Series");
@@ -72,14 +74,16 @@ public class StockMain {
 					String key = (String) it.next();
 					divMap.put(key, arr.getJSONObject(key).getString("7. dividend amount"));
 				}
-				System.out.println(divMap.toString());
+				// System.out.println(divMap.toString());
 
 				boolean foundLastDiv = false;
 				boolean growCheck = true;
 				int growingDivYears = 0;
 				BigDecimal prevYearDiv = BigDecimal.ZERO;
-
+				Map<String, Object> yearsMap = new HashMap<String, Object>();
+				String lastClosePrice = arr.getJSONObject(divMap.firstKey()).getString("5. adjusted close");
 				for (String year : years) {
+					Map<String, Object> yearMap = new HashMap<String, Object>();
 					BigDecimal yearDiv = BigDecimal.ZERO;
 					Map<String, BigDecimal> divDatas = new HashMap<String, BigDecimal>();
 					for (String key : divMap.keySet()) {
@@ -97,27 +101,39 @@ public class StockMain {
 							}
 						}
 					}
-					if(year.compareTo(currentYear)==0){
+					if (year.compareTo(currentYear) == 0) {
 						prevYearDiv = yearDiv;
 					}
-					if (prevYearDiv.compareTo(yearDiv) >= 0 && growCheck== true) {
-						growingDivYears++;
-					}else{
-						growCheck = false;
-						growingDivYears =0;
+					if (year.compareTo(currentYear) != 0) {
+						if (prevYearDiv.compareTo(yearDiv) >= 0 && growCheck == true) {
+							growingDivYears++;
+						} else {
+							growCheck = false;
+						}
 					}
-					String closePrice = arr.getJSONObject(divMap.firstKey()).getString("5. adjusted close");
-					BigDecimal yeld = yearDiv.divide(new BigDecimal(closePrice), 4, RoundingMode.HALF_UP);
-					System.out.println("symbol: " + symbols[i] + " year: " + year + " closePrice: " + closePrice + " divDatas : " + divDatas.toString() + " divYear " + yearDiv + " yeld: " + yeld);
+
+					BigDecimal yeld = yearDiv.divide(new BigDecimal(lastClosePrice), 4, RoundingMode.HALF_UP);
+					System.out.println("symbol: " + symbols[i] + " year: " + year + " closePrice: " + lastClosePrice + " divDatas : " + divDatas.toString() + " divYear " + yearDiv + " yeld: " + yeld);
 					prevYearDiv = yearDiv;
+					yearMap.put("divDatas", divDatas);
+					yearMap.put("divYear", yearDiv);
+					yearMap.put("yield", yeld);
+					yearsMap.put(year, yearMap);
 				}
-				System.out.println(" growDivYears: " + growingDivYears);
+
+				stockMap.put("growDivYears", growingDivYears);
+				stockMap.put("lastClosePrice", lastClosePrice);
+				stockMap.put("yearsMap", yearsMap);
+
+				// System.out.println(" growDivYears: " + growingDivYears);
 
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			stocksMap.put(symbols[i], stockMap);
 		}
+		System.out.println("StocksMap : " + stocksMap.toString());
 
 	}
 
@@ -149,8 +165,8 @@ public class StockMain {
 		JSONObject jsonObj = new JSONObject(response.toString());
 
 		// print result
-		System.out.println(jsonObj.toString());
-		System.out.println("Symbol: " + jsonObj.getJSONObject("Meta Data").get("2. Symbol"));
+		//System.out.println(jsonObj.toString());
+		//System.out.println("Symbol: " + jsonObj.getJSONObject("Meta Data").get("2. Symbol"));
 		return jsonObj;
 
 	}
