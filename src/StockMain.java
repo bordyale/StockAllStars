@@ -35,7 +35,6 @@ public class StockMain {
 
 	public static void main(String[] args) throws ParseException {
 		// TODO Auto-generated method stub
-		StockMain http = new StockMain();
 
 		// Regression
 		// double[] x = { 1, 2, 3, 4, 5 };
@@ -45,28 +44,57 @@ public class StockMain {
 		// System.out.println("R2: " + regr.R2());
 		// System.out.println("intercept: " + regr.intercept());
 
-		String[] symbols = { "EMN", "KO", "HNI" };
+		String[] symbols = { "EMN", "KO", "HNI", "O", "LYB", "AIG", "WFC", "BAC", "AFL", "JPM", "TROW", "MAIN", "TD", "RY", "LNC" };
 		// 1 = monthly
 		// 3 = quaterly
-		Integer[] divRate = { 1, 3, 3 };
+		Integer[] divRate = { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
 		String[] years = { "2020", "2019", "2018", "2017", "2016", "2015", "2014" };
-		String currentYear = new Integer(Calendar.getInstance().get(Calendar.YEAR)).toString();
+
 		String[] apikey = { "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5",
 				"TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "WRFKAPP9TCNWQUKC", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA",
 				"NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA", "NRXCKC71QSMJQZYA" };
 
-		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+		String[] apikey2 = { "IJMOD1FFWEBG5VWY" };
+
+		// SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 		// Date datum = format.parse("2019-05-06");
 		// Date datum = new Date();
 
-		Map<String, Map<String, Object>> stocksMap = new HashMap<String, Map<String, Object>>();
+		StockMain inst = new StockMain();
+		Map<String, Map<String, Object>> stocksMap = inst.getStocksData(symbols, divRate, years, apikey2);
 
+		System.out.println("StocksMap : " + stocksMap.toString());
+
+	}
+
+	private Map<String, Map<String, Object>> getStocksData(String[] symbols, Integer[] divRate, String[] years, String[] apikey) {
+
+		String currentYear = new Integer(Calendar.getInstance().get(Calendar.YEAR)).toString();
+
+		Map<String, Map<String, Object>> stocksMap = new HashMap<String, Map<String, Object>>();
+		int apiindex = 0;
+		// int apiindex2 = 1;
+		boolean reset = false;
 		for (int i = 0; i < symbols.length; i++) {
 			Map<String, Object> stockMap = new HashMap<String, Object>();
 
 			// System.out.println("Testing " + i + " - Send Http GET request");
 			try {
-				JSONObject resp = http.sendGet(symbols[i], apikey[i]);
+				// String apikey = getApiKey();
+
+				// int apiindexres = apiindex * apiindex2;
+				if (i != 0 && i % (5 * apikey.length) == 0) {
+					Thread.sleep(65000);
+					apiindex = 0;
+					reset = true;
+				}
+				if (i != 0 && i % 5 == 0 && reset == false) {
+					apiindex++;
+				}
+				reset = false;
+
+				JSONObject resp = sendGet(symbols[i], apikey[apiindex]);
+
 				JSONObject arr = resp.getJSONObject("Monthly Adjusted Time Series");
 				SortedMap<String, String> divMap = new TreeMap<String, String>(Collections.reverseOrder());
 				Iterator it = arr.keys();
@@ -124,6 +152,7 @@ public class StockMain {
 				stockMap.put("growDivYears", growingDivYears);
 				stockMap.put("lastClosePrice", lastClosePrice);
 				stockMap.put("yearsMap", yearsMap);
+				stockMap.put("currentYear", currentYear);
 
 				// System.out.println(" growDivYears: " + growingDivYears);
 
@@ -132,8 +161,9 @@ public class StockMain {
 				e.printStackTrace();
 			}
 			stocksMap.put(symbols[i], stockMap);
+
 		}
-		System.out.println("StocksMap : " + stocksMap.toString());
+		return stocksMap;
 
 	}
 
@@ -165,77 +195,10 @@ public class StockMain {
 		JSONObject jsonObj = new JSONObject(response.toString());
 
 		// print result
-		//System.out.println(jsonObj.toString());
-		//System.out.println("Symbol: " + jsonObj.getJSONObject("Meta Data").get("2. Symbol"));
+		// System.out.println(jsonObj.toString());
+		// System.out.println("Symbol: " +
+		// jsonObj.getJSONObject("Meta Data").get("2. Symbol"));
 		return jsonObj;
-
-	}
-
-	public static void exportDataToExcel(String fileName, double[] data) throws FileNotFoundException, IOException {
-		File file = new File(fileName);
-		if (!file.isFile())
-			file.createNewFile();
-
-		// CSVWriter csvWriter = new CSVWriter(new FileWriter(file));
-
-		// for (int i = 0; i < rowCount; i++) {
-		// int columnCount = data[i].length;
-		String[] values = new String[data.length];
-		for (int j = 0; j < data.length; j++) {
-			// csvWriter.writeNext(new String[] { Integer.toString(j + 1),
-			// Double.toString(data[j]).replace(".", ",") });
-			// values[j] = Double.toString(data[j]).replace(".", ",");
-		}
-		// csvWriter.writeNext(values);
-
-		// csvWriter.flush();
-		// csvWriter.close();
-	}
-
-	private static void elaborateSlopeTable(Map<String, Map<String, Object>> stocksMap) throws IOException {
-		System.out.println("Slope table not ordered:");
-		for (String key : stocksMap.keySet()) {
-			System.out.println(key + " --- " + stocksMap.get(key).get("slope"));
-		}
-
-		System.out.println("Slope table ordered:");
-		Set<Entry<String, Map<String, Object>>> set = stocksMap.entrySet();
-		List<Entry<String, Map<String, Object>>> list = new ArrayList<Entry<String, Map<String, Object>>>(set);
-		Collections.sort(list, new Comparator<Map.Entry<String, Map<String, Object>>>() {
-			public int compare(Map.Entry<String, Map<String, Object>> o1, Map.Entry<String, Map<String, Object>> o2) {
-				return ((Double) o2.getValue().get("n_slope")).compareTo((Double) o1.getValue().get("n_slope"));// Ascending
-				// order
-				// return (o2.getValue()).compareTo( o1.getValue()
-				// );//Descending order
-			}
-		});
-		for (Map.Entry<String, Map<String, Object>> entry : list) {
-			System.out.println(entry.getKey() + " ==== " + entry.getValue().get("n_slope") + " ==== " + entry.getValue().get("slope"));
-		}
-
-		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-		// Date datum = format.parse("2019-05-06");
-		Date datum = new Date();
-
-		String filename = "E:/" + format.format(datum) + "table.csv";
-		File file = new File(filename);
-		if (!file.isFile())
-			file.createNewFile();
-
-		// CSVWriter csvWriter = new CSVWriter(new FileWriter(file));
-
-		// for (int i = 0; i < rowCount; i++) {
-		// int columnCount = data[i].length;
-		for (Map.Entry<String, Map<String, Object>> entry : list) {
-			// csvWriter.writeNext(new String[] { entry.getKey(),
-			// entry.getValue().get("n_slope").toString(),
-			// entry.getValue().get("slope").toString() });
-			// values[j] = Double.toString(data[j]).replace(".", ",");
-		}
-		// csvWriter.writeNext(values);
-
-		// csvWriter.flush();
-		// csvWriter.close();
 
 	}
 
