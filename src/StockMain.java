@@ -34,20 +34,14 @@ public class StockMain {
 	private final String USER_AGENT = "Mozilla/5.0";
 
 	public static void main(String[] args) throws ParseException {
-		// TODO Auto-generated method stub
+		
 
-		// Regression
-		// double[] x = { 1, 2, 3, 4, 5 };
-		// double[] y = { 2, 4.0, 4.4, 7.1, 4 };
-		// LinearRegression regr = new LinearRegression(x, y);
-		// System.out.println("Slope: " + regr.slope());
-		// System.out.println("R2: " + regr.R2());
-		// System.out.println("intercept: " + regr.intercept());
+	
 
-		String[] symbols = { "EMN", "KO", "HNI", "O", "LYB", "AIG", "WFC", "BAC", "AFL", "JPM", "TROW", "MAIN", "TD", "RY", "LNC" };
+		String[] symbols = {"OHI", "EMN", "KO", "HNI", "O", "LYB", "AIG", "WFC", "BAC", "AFL", "JPM", "TROW", "MAIN", "TD", "RY", "LNC" };
 		// 1 = monthly
 		// 3 = quaterly
-		Integer[] divRate = { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
+		Integer[] divRate = {3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
 		String[] years = { "2020", "2019", "2018", "2017", "2016", "2015", "2014" };
 
 		String[] apikey = { "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "IJMOD1FFWEBG5VWY", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5", "TCWC4KTESJIY8UL5",
